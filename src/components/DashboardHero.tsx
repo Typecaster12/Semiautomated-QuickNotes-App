@@ -21,7 +21,7 @@ export const DashboardHero = () => {
                 {/* Active Card: Flashcards Summary */}
                 <div className="group relative bg-zinc-900 rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
                     <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <BookOpen className="w-32 h-32 text-white" />
+                        <BookOpen className="w-24 h-24 md:w-32 md:h-32 text-white transform translate-x-4 -translate-y-4 md:translate-x-0 md:translate-y-0" />
                     </div>
 
                     <div className="relative z-10 text-white">

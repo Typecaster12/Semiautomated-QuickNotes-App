@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "dev:all": "concurrently \"bun run dev\" \"bun run --cwd server start\"",
     "build": "vite build",
     "lint": "eslint .",
