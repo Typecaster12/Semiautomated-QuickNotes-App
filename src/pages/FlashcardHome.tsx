@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Flashcard } from "../components/Flashcard";
 import { NoteCreator } from "../components/NoteCreator";
 import { type Note } from "../lib/types";
@@ -8,22 +8,39 @@ import { cn } from "../lib/utils";
 import { Navbar } from "../components/Navbar";
 import { Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "../store/store";
-import { addFlashcard } from "../store/flashcardSlice";
+import { RootState, AppDispatch } from "../store/store";
+import { addNewFlashcard, fetchFlashcards } from "../store/flashcardSlice";
+import { useAuth } from "../context/AuthContext";
+import { db } from "../lib/firebase";
+import { collection, doc } from "firebase/firestore";
 
 export const FlashcardHome = () => {
     const notes = useSelector((state: RootState) => state.flashcards.flashcards);
-    const dispatch = useDispatch();
+    const { user } = useAuth();
+    const dispatch = useDispatch<AppDispatch>();
     const [isCreatorOpen, setIsCreatorOpen] = useState(false);
 
-    const handleAddNote = (title: string, content: string) => {
+    useEffect(() => {
+        if (user) {
+            dispatch(fetchFlashcards(user.uid));
+        }
+    }, [dispatch, user]);
+
+    const handleAddNote = async (title: string, content: string) => {
+        if (!user) return;
+
+        // Optimistic UI: Generate ID client-side
+        const newId = doc(collection(db, "users", user.uid, "flashcards")).id;
+
         const newNote: Note = {
-            id: Date.now().toString(),
+            id: newId,
             title,
             content,
             createdAt: Date.now(),
         };
-        dispatch(addFlashcard(newNote));
+
+        // Dispatch immediately (optimistic update handles UI)
+        dispatch(addNewFlashcard({ userId: user.uid, note: newNote }));
         setIsCreatorOpen(false);
     };
 

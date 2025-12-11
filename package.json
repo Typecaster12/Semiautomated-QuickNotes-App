@@ -16,6 +16,7 @@
     "@tanstack/ai-gemini": "^0.0.3",
     "@tanstack/ai-react": "^0.0.3",
     "clsx": "^2.1.1",
+    "firebase": "^12.6.0",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.559.0",
     "postcss": "^8.5.6",
