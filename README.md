@@ -216,7 +216,7 @@ This project is licensed under the [MIT License](LICENSE) — change if differen
 If you need help, open an issue in this repository or contact the maintainer:
 
 - Maintainer: Typecaster12
-- Email: replace-with-your-email@example.com (optional)
+- Email: harshmishra2997@gmail.com (optional)
 
 ## Acknowledgments
 
