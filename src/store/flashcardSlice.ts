@@ -1,7 +1,5 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import { Note } from '../lib/types';
-import { db } from '../lib/firebase'; // Ensure firebase is initialized
-import { collection, setDoc, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 
 interface FlashcardState {
     flashcards: Note[];
@@ -15,38 +13,55 @@ const initialState: FlashcardState = {
     error: null,
 };
 
+const API_URL = 'http://localhost:3000/api/flashcards';
+
+// Async Thunks
 // Async Thunks
 export const fetchFlashcards = createAsyncThunk(
     'flashcards/fetchFlashcards',
     async (userId: string) => {
-        const q = query(
-            collection(db, 'users', userId, 'flashcards'),
-            orderBy('createdAt', 'desc')
-        );
-        const querySnapshot = await getDocs(q);
-        const notes: Note[] = [];
-        querySnapshot.forEach((doc) => {
-            notes.push({ id: doc.id, ...doc.data() } as Note);
-        });
-        return notes;
+        const url = `${API_URL}/${userId}`;
+        console.log(`Fetching flashcards from: ${url}`);
+        const response = await fetch(url);
+        if (!response.ok) {
+            console.error(`Fetch failed for ${url}: ${response.status} ${response.statusText}`);
+            throw new Error('Failed to fetch flashcards');
+        }
+        return await response.json();
     }
 );
 
 export const addNewFlashcard = createAsyncThunk(
     'flashcards/addNewFlashcard',
     async ({ userId, note }: { userId: string, note: Note }) => {
-        // Use setDoc with the client-generated ID
-        await setDoc(doc(db, 'users', userId, 'flashcards', note.id), {
-            ...note
+        console.log(`Adding flashcard to: ${API_URL}`);
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ...note, userId }),
         });
-        return note;
+        if (!response.ok) {
+            console.error(`Add failed for ${API_URL}: ${response.status} ${response.statusText}`);
+            throw new Error('Failed to add flashcard');
+        }
+        return await response.json();
     }
 );
 
 export const removeFlashcard = createAsyncThunk(
     'flashcards/removeFlashcard',
     async ({ userId, noteId }: { userId: string, noteId: string }) => {
-        await deleteDoc(doc(db, 'users', userId, 'flashcards', noteId));
+        const url = `${API_URL}/${noteId}`;
+        console.log(`Removing flashcard at: ${url}`);
+        const response = await fetch(url, {
+            method: 'DELETE',
+        });
+        if (!response.ok) {
+            console.error(`Remove failed for ${url}: ${response.status} ${response.statusText}`);
+            throw new Error('Failed to delete flashcard');
+        }
         return noteId;
     }
 );
@@ -76,12 +91,19 @@ const flashcardSlice = createSlice({
             })
             // Add (Optimistic)
             .addCase(addNewFlashcard.pending, (state, action) => {
-                // Optimistically add the note to the UI
-                state.flashcards.unshift(action.meta.arg.note);
+                // Ideally, we wait for the server response to get the real ID,
+                // but for optimistic UI, we can assume success or show a loader.
+                // However, since we return the saved note from API, we can just append it in fulfilled.
+                // If we want purely optimistic, we'd need to handle ID syncing.
+                // For simplicity here, let's rely on fulfilled or existing logic.
+                // The previous logic was: state.flashcards.unshift(action.meta.arg.note);
+                // But the ID comes from server now (or at least _id).
+                // Let's trust the server response for the definitive list/item.
+            })
+            .addCase(addNewFlashcard.fulfilled, (state, action) => {
+                state.flashcards.unshift(action.payload);
             })
             .addCase(addNewFlashcard.rejected, (state, action) => {
-                // Rollback if failed
-                state.flashcards = state.flashcards.filter(n => n.id !== action.meta.arg.note.id);
                 state.error = action.error.message || 'Failed to add flashcard';
             })
             // Remove (Optimistic)
@@ -89,9 +111,9 @@ const flashcardSlice = createSlice({
                 state.flashcards = state.flashcards.filter(note => note.id !== action.meta.arg.noteId);
             })
             .addCase(removeFlashcard.rejected, (state, action) => {
-                // Rollback could be complex (need to restore note), but for deletion, re-fetching or error alert is usually enough.
-                // For now, we'll just set error. Ideally, we should add it back.
+                // Rollback logic would inherently require re-fetching or undoing the filter.
                 state.error = action.error.message || 'Failed to delete flashcard';
+                // Ideally trigger a re-fetch here if critical.
             });
     },
 });
